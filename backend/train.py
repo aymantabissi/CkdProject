@@ -85,6 +85,7 @@ def train():
     print("✅ Saved: model/kidney_model.pkl")
     print("✅ Saved: model/scaler.pkl")
     print("✅ Saved: model/feature_map.pkl")
+    print("")
 
 if __name__ == "__main__":
     train()
