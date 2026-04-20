@@ -63,10 +63,10 @@ export default function LandingPage() {
         style={{ background: "radial-gradient(circle, rgba(52,211,153,0.08), transparent 70%)" }}
       />
 
-      <div className="relative max-w-4xl mx-auto px-6 py-16">
+      <div className="relative max-w-4xl mx-auto px-6 py-6">
 
         {/* ── Hero ── */}
-        <div className="text-center mb-20">
+        <div className="text-center mb-10">
 
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 mb-8">
