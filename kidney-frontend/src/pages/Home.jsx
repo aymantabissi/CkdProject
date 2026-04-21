@@ -4,23 +4,16 @@ import toast, { Toaster } from "react-hot-toast";
 import jsPDF from "jspdf";
 import { predictKidney } from "../services/api";
 
-// ─── Skeleton pulse block ─────────────────────────────────────────────────────
 function Skeleton({ className = "" }) {
-  return (
-    <div
-      className={`rounded-xl bg-slate-200 animate-pulse ${className}`}
-    />
-  );
+  return <div className={`rounded-xl bg-slate-200 animate-pulse ${className}`} />;
 }
 
-// ─── Loading overlay — covers the panel while analyzing ───────────────────────
 function LoadingOverlay() {
   return (
     <div
       className="absolute inset-0 z-20 rounded-3xl flex flex-col items-center justify-center gap-6"
       style={{ background: "rgba(248,250,252,0.92)", backdropFilter: "blur(4px)" }}
     >
-      {/* Animated kidney icon */}
       <div className="relative">
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center animate-pulse"
@@ -31,17 +24,13 @@ function LoadingOverlay() {
             <line x1="12" y1="8" x2="12" y2="13" /><line x1="9.5" y1="10.5" x2="14.5" y2="10.5" />
           </svg>
         </div>
-        {/* Spinning ring */}
         <div className="absolute inset-[-6px] rounded-[20px] border-2 border-transparent border-t-sky-400 animate-spin" />
       </div>
-
-      {/* Skeleton rows — simulating "thinking" */}
       <div className="flex flex-col gap-2.5 w-52">
         <Skeleton className="h-2.5 w-full" />
         <Skeleton className="h-2.5 w-4/5" />
         <Skeleton className="h-2.5 w-3/5" />
       </div>
-
       <p className="text-[12px] font-semibold text-slate-400 tracking-wide">
         Analyzing patient data...
       </p>
@@ -49,7 +38,6 @@ function LoadingOverlay() {
   );
 }
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
 function Toggle({ name, value, onChange }) {
   return (
     <div className="flex gap-1.5">
@@ -76,7 +64,6 @@ function Toggle({ name, value, onChange }) {
   );
 }
 
-// ─── Field ────────────────────────────────────────────────────────────────────
 function Field({ label, unit, required, children }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -90,7 +77,6 @@ function Field({ label, unit, required, children }) {
   );
 }
 
-// ─── NumInput ─────────────────────────────────────────────────────────────────
 function NumInput({ name, placeholder, step, value, onChange }) {
   return (
     <input
@@ -105,7 +91,6 @@ function NumInput({ name, placeholder, step, value, onChange }) {
   );
 }
 
-// ─── Section title ────────────────────────────────────────────────────────────
 const SECTION_STYLES = {
   personal: { dot: "bg-blue-400",   label: "text-blue-500"   },
   blood:    { dot: "bg-teal-500",   label: "text-teal-600"   },
@@ -123,7 +108,6 @@ function SectionTitle({ title, type }) {
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function KidneyForm() {
   const [form, setForm] = useState({
     age: "", bp: "", creatinine: "", urea: "",
@@ -131,186 +115,169 @@ export default function KidneyForm() {
     protein: "", glucose: "", rbc: "",
     diabetes: "", hypertension: "",
   });
-  const [result, setResult] = useState(null);   // null | "high" | "low"
-  const [stats, setStats]   = useState(null);   // { confidence, risk_percent }
+  const [result, setResult] = useState(null);
+  const [stats, setStats]   = useState(null);
   const [loading, setLoading] = useState(false);
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
+  // ─── generatePDF receives prediction + statsData as params so it works both
+  //     auto (called right after API) and manually (Download button).
+  //     When called from the button, falls back to component state.
+  const generatePDF = (predictionOverride, statsOverride) => {
+    const currentResult = predictionOverride ?? result;
+    const currentStats  = statsOverride  ?? stats;
+    const isHigh = currentResult === "high";
 
-const generatePDF = () => {
-  const doc = new jsPDF();
-  const isHigh = result === "high";
+    const doc  = new jsPDF();
+    const date = new Date().toLocaleDateString("en-GB");
+    const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-  const date = new Date().toLocaleDateString("en-GB");
-  const time = new Date().toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  // ─── HEADER ───
-  doc.setFillColor(15, 41, 66);
-  doc.rect(0, 0, 210, 35, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("NephroAI — Kidney Risk Report", 20, 15);
-
-  doc.setFontSize(9);
-  doc.setTextColor(125, 211, 252);
-  doc.text("AI-Powered Clinical Decision Support", 20, 22);
-
-  doc.setTextColor(180, 180, 180);
-  doc.text(`Generated: ${date} at ${time}`, 20, 28);
-
-  // ─── RESULT BANNER ───
-  const bannerColor = isHigh ? [254, 226, 226] : [209, 250, 229];
-  const bannerText = isHigh ? [153, 27, 27] : [6, 95, 70];
-  const label = isHigh
-    ? "HIGH RISK DETECTED"
-    : "LOW RISK — NORMAL RANGE";
-
-  doc.setFillColor(...bannerColor);
-  doc.roundedRect(15, 45, 180, 15, 4, 4, "F");
-
-  doc.setTextColor(...bannerText);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text(label, 105, 55, { align: "center" });
-
-  // ─── SECTION TITLE ───
-  doc.setFillColor(240, 240, 240);
-  doc.roundedRect(15, 65, 180, 8, 2, 2, "F");
-
-  doc.setTextColor(30, 64, 175);
-  doc.setFontSize(9);
-  doc.text("PATIENT CLINICAL DATA", 18, 71);
-
-  // ─── TABLE ───
-  const fields = [
-    ["Age", form.age + " years"],
-    ["Blood Pressure", form.bp + " mmHg"],
-    ["Creatinine", form.creatinine + " mg/dL"],
-    ["Blood Urea", form.urea + " mg/dL"],
-    ["Hemoglobin", form.hemoglobin + " g/dL"],
-    ["Sodium", form.sodium + " mEq/L"],
-    ["Potassium", form.potassium + " mEq/L"],
-    ["Protein in Urine", form.protein === "1" ? "Positive" : "Negative"],
-    ["Glucose in Urine", form.glucose === "1" ? "Positive" : "Negative"],
-    ["RBC in Urine", form.rbc === "1" ? "Positive" : "Negative"],
-    ["Diabetes", form.diabetes === "1" ? "Yes" : "No"],
-    ["Hypertension", form.hypertension === "1" ? "Yes" : "No"],
-  ];
-
-  let y = 80;
-
-  fields.forEach(([label, value], i) => {
-    if (i % 2 === 0) {
-      doc.setFillColor(248, 250, 252);
-      doc.rect(15, y - 5, 180, 8, "F");
-    }
-
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(8);
-    doc.text(label, 18, y);
-
-    doc.setTextColor(15, 23, 42);
+    // ─── HEADER ───
+    doc.setFillColor(15, 41, 66);
+    doc.rect(0, 0, 210, 35, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(value, 120, y);
+    doc.text("NephroAI \u2014 Kidney Risk Report", 20, 15);
+    doc.setFontSize(9);
+    doc.setTextColor(125, 211, 252);
+    doc.text("AI-Powered Clinical Decision Support", 20, 22);
+    doc.setTextColor(180, 180, 180);
+    doc.text(`Generated: ${date} at ${time}`, 20, 28);
 
-    y += 8;
-  });
+    // ─── RESULT BANNER ───
+    const bannerColor = isHigh ? [254, 226, 226] : [209, 250, 229];
+    const bannerText  = isHigh ? [153, 27, 27]   : [6, 95, 70];
+    const bannerLabel = isHigh ? "HIGH RISK DETECTED" : "LOW RISK \u2014 NORMAL RANGE";
+    doc.setFillColor(...bannerColor);
+    doc.roundedRect(15, 45, 180, 15, 4, 4, "F");
+    doc.setTextColor(...bannerText);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(bannerLabel, 105, 55, { align: "center" });
 
-  // ─── RECOMMENDATION ───
-  y += 5;
+    // ─── SECTION HEADER ───
+    doc.setFillColor(240, 240, 240);
+    doc.roundedRect(15, 65, 180, 8, 2, 2, "F");
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(9);
+    doc.text("PATIENT CLINICAL DATA", 18, 71);
 
-  const recText = isHigh
-    ? "Further clinical evaluation is strongly recommended. Please consult a nephrologist."
-    : "Lab values are within normal range. Maintain a healthy lifestyle and regular checkups.";
+    // ─── TABLE ───
+    const fields = [
+      ["Age",              form.age         + " years"],
+      ["Blood Pressure",   form.bp          + " mmHg"],
+      ["Creatinine",       form.creatinine  + " mg/dL"],
+      ["Blood Urea",       form.urea        + " mg/dL"],
+      ["Hemoglobin",       form.hemoglobin  + " g/dL"],
+      ["Sodium",           form.sodium      + " mEq/L"],
+      ["Potassium",        form.potassium   + " mEq/L"],
+      ["Protein in Urine", form.protein   === "1" ? "Positive" : "Negative"],
+      ["Glucose in Urine", form.glucose   === "1" ? "Positive" : "Negative"],
+      ["RBC in Urine",     form.rbc       === "1" ? "Positive" : "Negative"],
+      ["Diabetes",         form.diabetes  === "1" ? "Yes" : "No"],
+      ["Hypertension",     form.hypertension === "1" ? "Yes" : "No"],
+    ];
 
-  doc.setFillColor(isHigh ? 254 : 240, isHigh ? 242 : 253, isHigh ? 242 : 244);
-  doc.setDrawColor(isHigh ? 252 : 134, isHigh ? 165 : 239, isHigh ? 165 : 172);
-
-  doc.roundedRect(15, y, 180, 25, 3, 3, "FD");
-
-  doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("CLINICAL RECOMMENDATION", 18, y + 7);
-
-  doc.setFont("helvetica", "normal");
-
-  const split = doc.splitTextToSize(recText, 170);
-  doc.text(split, 18, y + 14);
-
-  // ─── FOOTER ───
-  doc.setFillColor(15, 41, 66);
-  doc.rect(0, 282, 210, 15, "F");
-
-  doc.setTextColor(200, 200, 200);
-  doc.setFontSize(7);
-  doc.text(
-    "NephroAI · For clinical decision support only",
-    105,
-    290,
-    { align: "center" }
-  );
-
-  doc.save("NephroAI_Report.pdf");
-};
-
-const handleSubmit = async () => {
-  if (!form.age || !form.bp || !form.creatinine) {
-    toast.error("Age, Blood Pressure, and Creatinine are required.");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const res = await predictKidney(form);
-
-    const prediction = res.prediction === 1 ? "high" : "low";
-
-    const statsData = {
-      confidence: res.confidence,
-      risk_percent: res.risk_percent,
-    };
-
-    // تحديث UI
-    setResult(prediction);
-    setStats(statsData);
-
-    // 🔥 AUTO PDF (clean)
-    generatePDF(prediction, statsData);
-
-    // Toast
-    toast.success("Report generated & downloaded!", {
-      icon: "📄",
+    let y = 80;
+    fields.forEach(([lbl, val], i) => {
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(15, y - 5, 180, 8, "F");
+      }
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(lbl, 18, y);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      doc.text(val, 120, y);
+      y += 8;
     });
 
-  } catch (err) {
-    toast.error(err?.response?.data?.error || "Server error");
-  }
+    // ─── STATS ROW (Risk % + Confidence) ───
+    if (currentStats) {
+      y += 4;
+      doc.setFillColor(isHigh ? 254 : 236, isHigh ? 235 : 253, isHigh ? 235 : 245);
+      doc.roundedRect(15, y, 87, 16, 3, 3, "F");
+      doc.roundedRect(108, y, 87, 16, 3, 3, "F");
 
-  setLoading(false);
-};
+      doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${currentStats.risk_percent}%`, 58, y + 10, { align: "center" });
+      doc.text(`${currentStats.confidence}%`,  151, y + 10, { align: "center" });
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120, 120, 120);
+      doc.text("RISK SCORE",  58, y + 14, { align: "center" });
+      doc.text("CONFIDENCE", 151, y + 14, { align: "center" });
+      y += 22;
+    }
+
+    // ─── RECOMMENDATION ───
+    y += 4;
+    const recText = isHigh
+      ? "Further clinical evaluation is strongly recommended. Please consult a nephrologist."
+      : "Lab values are within normal range. Maintain a healthy lifestyle and regular checkups.";
+    doc.setFillColor(isHigh ? 254 : 240, isHigh ? 242 : 253, isHigh ? 242 : 244);
+    doc.setDrawColor(isHigh ? 252 : 134, isHigh ? 165 : 239, isHigh ? 165 : 172);
+    doc.roundedRect(15, y, 180, 25, 3, 3, "FD");
+    doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("CLINICAL RECOMMENDATION", 18, y + 7);
+    doc.setFont("helvetica", "normal");
+    doc.text(doc.splitTextToSize(recText, 170), 18, y + 14);
+
+    // ─── FOOTER ───
+    doc.setFillColor(15, 41, 66);
+    doc.rect(0, 282, 210, 15, "F");
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(7);
+    doc.text("NephroAI \u00B7 For clinical decision support only", 105, 290, { align: "center" });
+
+    doc.save("NephroAI_Report.pdf");
+  };
+
+  const handleSubmit = async () => {
+    if (!form.age || !form.bp || !form.creatinine) {
+      toast.error("Age, Blood Pressure, and Creatinine are required.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await predictKidney(form);
+
+      const prediction = res.prediction === 1 ? "high" : "low";
+      const statsData  = { confidence: res.confidence, risk_percent: res.risk_percent };
+
+      setResult(prediction);
+      setStats(statsData);
+
+      // Pass fresh values directly — state hasn't updated yet at this point
+      generatePDF(prediction, statsData);
+
+      toast.success("Report generated & downloaded!", { icon: "📄" });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Server error");
+    }
+
+    setLoading(false);
+  };
 
   return (
     <>
-      {/* ── Toast container — top-right, matches dark theme ── */}
-      <Toaster
-        position="top-right"
-        toastOptions={{ duration: 4000 }}
-        containerStyle={{ top: 80 }}
-      />
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} containerStyle={{ top: 80 }} />
 
       <div
         className="min-h-screen flex items-center justify-center p-5"
         style={{ background: "linear-gradient(135deg, #0f2942 0%, #0d3d56 50%, #0a4a4a 100%)" }}
       >
-        {/* Decorative blobs */}
         <div className="fixed top-[-80px] left-[-80px] w-72 h-72 rounded-full opacity-10 pointer-events-none"
           style={{ background: "radial-gradient(circle, #38bdf8, transparent)" }} />
         <div className="fixed bottom-[-60px] right-[-60px] w-60 h-60 rounded-full opacity-10 pointer-events-none"
@@ -347,18 +314,14 @@ const handleSubmit = async () => {
             )}
           </div>
 
-          {/* Panel — relative for overlay positioning */}
+          {/* Panel */}
           <div
             className="bg-slate-50 rounded-3xl overflow-hidden shadow-2xl relative"
             style={{ boxShadow: "0 25px 60px rgba(0,0,0,0.4)" }}
           >
-            {/* Loading overlay */}
             {loading && <LoadingOverlay />}
-
-            {/* Rainbow top strip */}
             <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #38bdf8, #34d399, #818cf8)" }} />
 
-            {/* Two-column body */}
             <div className="grid grid-cols-2 divide-x divide-slate-100">
 
               {/* LEFT */}
@@ -426,12 +389,9 @@ const handleSubmit = async () => {
                   </div>
                 </div>
 
-                {/* Result detail card */}
                 {result && (
                   <div className={`rounded-2xl px-4 py-3.5 border-2 transition-all ${
-                    result === "high"
-                      ? "bg-red-50 border-red-200"
-                      : "bg-emerald-50 border-emerald-200"
+                    result === "high" ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"
                   }`}>
                     <p className={`text-[11px] font-bold mb-1 ${result === "high" ? "text-red-700" : "text-emerald-700"}`}>
                       {result === "high" ? "High Risk Detected" : "Low Risk — Normal Range"}
@@ -467,11 +427,10 @@ const handleSubmit = async () => {
 
                 <div className="flex-1" />
 
-                {/* Download PDF button — shows after result */}
                 {result && (
                   <button
                     type="button"
-                    onClick={generatePDF}
+                    onClick={() => generatePDF()}
                     className="w-full py-2.5 rounded-2xl font-bold text-[12px] text-white/80 border border-white/10 hover:border-white/20 hover:text-white transition-all flex items-center justify-center gap-2"
                     style={{ background: "rgba(255,255,255,0.05)" }}
                   >
@@ -482,7 +441,6 @@ const handleSubmit = async () => {
                   </button>
                 )}
 
-                {/* Submit */}
                 <div>
                   <button
                     type="button"
@@ -508,7 +466,6 @@ const handleSubmit = async () => {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-center gap-4 mt-4">
             <span className="text-[10px] text-white/20 uppercase tracking-widest">Nephrology AI Module</span>
             <span className="w-1 h-1 rounded-full bg-white/20" />
