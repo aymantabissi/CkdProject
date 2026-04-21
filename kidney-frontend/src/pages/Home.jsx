@@ -1,6 +1,7 @@
 // src/components/KidneyForm.jsx
 import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import jsPDF from "jspdf";
 import { predictKidney } from "../services/api";
 
 // ─── Skeleton pulse block ─────────────────────────────────────────────────────
@@ -136,87 +137,165 @@ export default function KidneyForm() {
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async () => {
-    // Validation toast
-    if (!form.age || !form.bp || !form.creatinine) {
-      toast.error("Age, Blood Pressure, and Creatinine are required.", {
-        icon: "⚠️",
-        style: {
-          background: "#FEF2F2",
-          color: "#991B1B",
-          border: "1px solid #FECACA",
-          fontSize: "12px",
-          fontWeight: "600",
-        },
-      });
-      return;
+
+const generatePDF = () => {
+  const doc = new jsPDF();
+  const isHigh = result === "high";
+
+  const date = new Date().toLocaleDateString("en-GB");
+  const time = new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // ─── HEADER ───
+  doc.setFillColor(15, 41, 66);
+  doc.rect(0, 0, 210, 35, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("NephroAI — Kidney Risk Report", 20, 15);
+
+  doc.setFontSize(9);
+  doc.setTextColor(125, 211, 252);
+  doc.text("AI-Powered Clinical Decision Support", 20, 22);
+
+  doc.setTextColor(180, 180, 180);
+  doc.text(`Generated: ${date} at ${time}`, 20, 28);
+
+  // ─── RESULT BANNER ───
+  const bannerColor = isHigh ? [254, 226, 226] : [209, 250, 229];
+  const bannerText = isHigh ? [153, 27, 27] : [6, 95, 70];
+  const label = isHigh
+    ? "HIGH RISK DETECTED"
+    : "LOW RISK — NORMAL RANGE";
+
+  doc.setFillColor(...bannerColor);
+  doc.roundedRect(15, 45, 180, 15, 4, 4, "F");
+
+  doc.setTextColor(...bannerText);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(label, 105, 55, { align: "center" });
+
+  // ─── SECTION TITLE ───
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(15, 65, 180, 8, 2, 2, "F");
+
+  doc.setTextColor(30, 64, 175);
+  doc.setFontSize(9);
+  doc.text("PATIENT CLINICAL DATA", 18, 71);
+
+  // ─── TABLE ───
+  const fields = [
+    ["Age", form.age + " years"],
+    ["Blood Pressure", form.bp + " mmHg"],
+    ["Creatinine", form.creatinine + " mg/dL"],
+    ["Blood Urea", form.urea + " mg/dL"],
+    ["Hemoglobin", form.hemoglobin + " g/dL"],
+    ["Sodium", form.sodium + " mEq/L"],
+    ["Potassium", form.potassium + " mEq/L"],
+    ["Protein in Urine", form.protein === "1" ? "Positive" : "Negative"],
+    ["Glucose in Urine", form.glucose === "1" ? "Positive" : "Negative"],
+    ["RBC in Urine", form.rbc === "1" ? "Positive" : "Negative"],
+    ["Diabetes", form.diabetes === "1" ? "Yes" : "No"],
+    ["Hypertension", form.hypertension === "1" ? "Yes" : "No"],
+  ];
+
+  let y = 80;
+
+  fields.forEach(([label, value], i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, y - 5, 180, 8, "F");
     }
 
-    setLoading(true);
-    setResult(null);
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(8);
+    doc.text(label, 18, y);
 
-    // Loading toast
-    const loadingToast = toast.loading("Analyzing patient data...", {
-      style: {
-        background: "#F0F9FF",
-        color: "#0C4A6E",
-        border: "1px solid #BAE6FD",
-        fontSize: "12px",
-        fontWeight: "600",
-      },
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.text(value, 120, y);
+
+    y += 8;
+  });
+
+  // ─── RECOMMENDATION ───
+  y += 5;
+
+  const recText = isHigh
+    ? "Further clinical evaluation is strongly recommended. Please consult a nephrologist."
+    : "Lab values are within normal range. Maintain a healthy lifestyle and regular checkups.";
+
+  doc.setFillColor(isHigh ? 254 : 240, isHigh ? 242 : 253, isHigh ? 242 : 244);
+  doc.setDrawColor(isHigh ? 252 : 134, isHigh ? 165 : 239, isHigh ? 165 : 172);
+
+  doc.roundedRect(15, y, 180, 25, 3, 3, "FD");
+
+  doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("CLINICAL RECOMMENDATION", 18, y + 7);
+
+  doc.setFont("helvetica", "normal");
+
+  const split = doc.splitTextToSize(recText, 170);
+  doc.text(split, 18, y + 14);
+
+  // ─── FOOTER ───
+  doc.setFillColor(15, 41, 66);
+  doc.rect(0, 282, 210, 15, "F");
+
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(7);
+  doc.text(
+    "NephroAI · For clinical decision support only",
+    105,
+    290,
+    { align: "center" }
+  );
+
+  doc.save("NephroAI_Report.pdf");
+};
+
+const handleSubmit = async () => {
+  if (!form.age || !form.bp || !form.creatinine) {
+    toast.error("Age, Blood Pressure, and Creatinine are required.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await predictKidney(form);
+
+    const prediction = res.prediction === 1 ? "high" : "low";
+
+    const statsData = {
+      confidence: res.confidence,
+      risk_percent: res.risk_percent,
+    };
+
+    // تحديث UI
+    setResult(prediction);
+    setStats(statsData);
+
+    // 🔥 AUTO PDF (clean)
+    generatePDF(prediction, statsData);
+
+    // Toast
+    toast.success("Report generated & downloaded!", {
+      icon: "📄",
     });
 
-    try {
-      const res = await predictKidney(form);
-      const prediction = res.prediction === 1 ? "high" : "low";
-      setResult(prediction);
-      setStats({ confidence: res.confidence, risk_percent: res.risk_percent });
+  } catch (err) {
+    toast.error(err?.response?.data?.error || "Server error");
+  }
 
-      toast.dismiss(loadingToast);
-
-      // Result toast
-      if (prediction === "high") {
-        toast.error("High Risk Detected — Clinical evaluation recommended.", {
-          duration: 5000,
-          icon: "🔴",
-          style: {
-            background: "#FEF2F2",
-            color: "#7F1D1D",
-            border: "1px solid #FECACA",
-            fontSize: "12px",
-            fontWeight: "600",
-            maxWidth: "340px",
-          },
-        });
-      } else {
-        toast.success("Low Risk — Lab values within normal range.", {
-          duration: 5000,
-          icon: "🟢",
-          style: {
-            background: "#F0FDF4",
-            color: "#14532D",
-            border: "1px solid #BBF7D0",
-            fontSize: "12px",
-            fontWeight: "600",
-            maxWidth: "340px",
-          },
-        });
-      }
-    } catch {
-      toast.dismiss(loadingToast);
-      toast.error("Server error — please try again.", {
-        style: {
-          background: "#FEF2F2",
-          color: "#991B1B",
-          border: "1px solid #FECACA",
-          fontSize: "12px",
-          fontWeight: "600",
-        },
-      });
-    }
-
-    setLoading(false);
-  };
+  setLoading(false);
+};
 
   return (
     <>
@@ -387,6 +466,21 @@ export default function KidneyForm() {
                 )}
 
                 <div className="flex-1" />
+
+                {/* Download PDF button — shows after result */}
+                {result && (
+                  <button
+                    type="button"
+                    onClick={generatePDF}
+                    className="w-full py-2.5 rounded-2xl font-bold text-[12px] text-white/80 border border-white/10 hover:border-white/20 hover:text-white transition-all flex items-center justify-center gap-2"
+                    style={{ background: "rgba(255,255,255,0.05)" }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    Download PDF Report
+                  </button>
+                )}
 
                 {/* Submit */}
                 <div>
