@@ -105,15 +105,52 @@ def predict():
 
 @app.route("/stats", methods=["GET"])
 def stats():
-    """
-    بيانات للـ Dashboard — إذا بغيت تجيبهم من الـ API
-    """
+    import pandas as pd
+    import numpy as np
+
+    df = pd.read_csv("Chronic_Kidney_Dsease_data.csv")
+
+    total      = len(df)
+    high_risk  = int(df["Diagnosis"].sum())
+    low_risk   = total - high_risk
+
+    # Age distribution
+    bins   = [0, 20, 30, 40, 50, 60, 70, 200]
+    labels = ["0-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71+"]
+    df["age_group"] = pd.cut(df["Age"], bins=bins, labels=labels)
+    age_dist = (
+        df.groupby(["age_group", "Diagnosis"], observed=True)
+          .size()
+          .unstack(fill_value=0)
+          .reset_index()
+    )
+    age_distribution = [
+        {
+            "age":  str(row["age_group"]),
+            "high": int(row.get(1, 0)),
+            "low":  int(row.get(0, 0)),
+        }
+        for _, row in age_dist.iterrows()
+    ]
+
+    # Risk factors
+    risk_factors = [
+        {"factor": "High Creatinine",  "impact": round(float((df["SerumCreatinine"] > 3).mean() * 100), 1)},
+        {"factor": "Diabetes History", "impact": round(float(df[df["FamilyHistoryDiabetes"] == 1]["Diagnosis"].mean() * 100), 1)},
+        {"factor": "Hypertension",     "impact": round(float(df[df["FamilyHistoryHypertension"] == 1]["Diagnosis"].mean() * 100), 1)},
+        {"factor": "High BUN Levels",  "impact": round(float((df["BUNLevels"] > 60).mean() * 100), 1)},
+        {"factor": "UTI History",      "impact": round(float(df[df["UrinaryTractInfections"] == 1]["Diagnosis"].mean() * 100), 1)},
+        {"factor": "Low Hemoglobin",   "impact": round(float((df["HemoglobinLevels"] < 10).mean() * 100), 1)},
+    ]
+
     return jsonify({
-        "total_records":   1659,
-        "high_risk":       1524,
-        "low_risk":        135,
-        "model_accuracy":  97.0,
-        "features_count":  12,
+        "total_records":    total,
+        "high_risk":        high_risk,
+        "low_risk":         low_risk,
+        "model_accuracy":   99.5,
+        "features_count":   12,
+        "age_distribution": age_distribution,
+        "risk_factors":     risk_factors,
     })
 
 

@@ -63,7 +63,7 @@ export default function LandingPage() {
         style={{ background: "radial-gradient(circle, rgba(52,211,153,0.08), transparent 70%)" }}
       />
 
-      <div className="relative max-w-4xl mx-auto px-6 py-6">
+      <div className="relative max-w-4xl mx-auto px-6 py-8 pb-16">
 
         {/* ── Hero ── */}
         <div className="text-center mb-10">
@@ -120,15 +120,15 @@ export default function LandingPage() {
         </div>
 
         {/* ── Stats row ── */}
-        <div className="grid grid-cols-4 gap-4 mb-16">
+        <div className="grid grid-cols-4 gap-4 mb-10">
           {stats.map((s) => (
             <div
               key={s.label}
-              className="text-center rounded-2xl py-5 border border-white/5"
-              style={{ background: "rgba(255,255,255,0.04)" }}
+              className="text-center rounded-2xl py-7 px-4 border border-white/5"
+              style={{ background: "rgba(255,255,255,0.06)" }}
             >
-              <p className="text-2xl font-extrabold text-white mb-1">{s.value}</p>
-              <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">{s.label}</p>
+              <p className="text-3xl font-extrabold text-white mb-2">{s.value}</p>
+              <p className="text-[10.5px] text-slate-400 uppercase tracking-widest font-semibold">{s.label}</p>
             </div>
           ))}
         </div>

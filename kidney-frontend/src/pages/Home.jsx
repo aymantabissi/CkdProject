@@ -130,7 +130,8 @@ export default function KidneyForm() {
     protein: "", glucose: "", rbc: "",
     diabetes: "", hypertension: "",
   });
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(null);   // null | "high" | "low"
+  const [stats, setStats]   = useState(null);   // { confidence, risk_percent }
   const [loading, setLoading] = useState(false);
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -169,6 +170,7 @@ export default function KidneyForm() {
       const res = await predictKidney(form);
       const prediction = res.prediction === 1 ? "high" : "low";
       setResult(prediction);
+      setStats({ confidence: res.confidence, risk_percent: res.risk_percent });
 
       toast.dismiss(loadingToast);
 
@@ -360,6 +362,27 @@ export default function KidneyForm() {
                         ? "Further clinical evaluation strongly recommended. Consult a nephrologist."
                         : "Lab values appear within acceptable range. Continue routine monitoring."}
                     </p>
+                    {stats && (
+                      <div className="flex gap-3 mt-3 pt-3 border-t border-current/10">
+                        <div className="flex-1 text-center">
+                          <p className={`text-[18px] font-extrabold leading-none ${result === "high" ? "text-red-600" : "text-emerald-600"}`}>
+                            {stats.risk_percent}%
+                          </p>
+                          <p className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${result === "high" ? "text-red-400" : "text-emerald-500"}`}>
+                            Risk Score
+                          </p>
+                        </div>
+                        <div className="w-px bg-current/10" />
+                        <div className="flex-1 text-center">
+                          <p className={`text-[18px] font-extrabold leading-none ${result === "high" ? "text-red-600" : "text-emerald-600"}`}>
+                            {stats.confidence}%
+                          </p>
+                          <p className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${result === "high" ? "text-red-400" : "text-emerald-500"}`}>
+                            Confidence
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
