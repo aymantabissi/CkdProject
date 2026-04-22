@@ -4,3 +4,7 @@ scikit-learn
 pandas
 numpy
 joblib
+pymongo
+dotenv
+bcrypt
+jwt

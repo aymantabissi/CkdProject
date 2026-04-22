@@ -10,9 +10,9 @@ import numpy as np
 import os
 
 app = Flask(__name__)
-CORS(app)  # يسمح للـ React frontend يكلمو
+CORS(app)  # يسمح للـ React frontend بالتواصل مع السيرفر
 
-# ─── Load model + scaler عند بداية السيرفر ────────────────────────────────────
+# ─── تحميل الموديل الجديد (Gradient Boosting) عند بداية السيرفر ──────────────
 MODEL_PATH  = "model/kidney_model.pkl"
 SCALER_PATH = "model/scaler.pkl"
 FMAP_PATH   = "model/feature_map.pkl"
@@ -22,24 +22,21 @@ if not os.path.exists(MODEL_PATH):
         "❌ Model not found! Run: python train.py first"
     )
 
-model      = joblib.load(MODEL_PATH)
-scaler     = joblib.load(SCALER_PATH)
+model       = joblib.load(MODEL_PATH)
+scaler      = joblib.load(SCALER_PATH)
 feature_map = joblib.load(FMAP_PATH)
 
-# ترتيب الـ features كما في الـ training
+# ترتيب الـ features كما تم استخدامه في التدريب
 FORM_FEATURES = list(feature_map.keys())
 
-print("✅ Model loaded successfully!")
-print(f"   Features: {FORM_FEATURES}")
+print("✅ Gradient Boosting Model loaded successfully!")
 
 
 # ─── Helper: parse + validate input ──────────────────────────────────────────
 def parse_input(data: dict) -> list:
     """
     يحوّل الـ JSON من الـ frontend لـ array جاهز للـ model
-    كل قيمة ناقصة تتعوض بالـ median
     """
-    # Medians من الـ dataset (fallback إذا خلاو حقل فارغ)
     DEFAULTS = {
         "age":          50.0,
         "bp":           120.0,
@@ -67,11 +64,12 @@ def parse_input(data: dict) -> list:
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 app.register_blueprint(auth, url_prefix="/auth")
+
 @app.route("/", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "message": "NephroAI Backend is running 🚀"})
 
-#api  de prediction random forest 
+# تحديث الـ API ليتناسب مع Gradient Boosting
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
@@ -80,19 +78,20 @@ def predict():
         if not data:
             return jsonify({"error": "No data received"}), 400
 
-        # Parse input
+        # تحضير البيانات
         row = parse_input(data)
         X   = np.array([row])
 
-        # Scale
+        # الـ Scaling (ضروري جداً لـ Gradient Boosting)
         X_scaled = scaler.transform(X)
 
-        # Predict
+        # حساب الاحتمالات
         proba        = model.predict_proba(X_scaled)[0]
         risk_percent = round(float(proba[1]) * 100, 1)
 
-        # Threshold 0.65 — يقلل false positives
-        THRESHOLD  = 0.65
+        # تعديل الـ THRESHOLD ليكون 0.50 بدلاً من 0.65
+        # بما أننا استخدمنا SMOTE، الموديل أصبح متوازناً ولا نحتاج لعتبة عالية جداً
+        THRESHOLD  = 0.50
         prediction = 1 if proba[1] >= THRESHOLD else 0
         confidence = round(float(proba[prediction]) * 100, 1)
 
@@ -101,6 +100,7 @@ def predict():
             "confidence":   confidence,
             "risk_percent": risk_percent,
             "label":        "High Risk" if prediction == 1 else "Low Risk",
+            "model_type":   "Gradient Boosting"
         })
 
     except Exception as e:
@@ -110,15 +110,13 @@ def predict():
 @app.route("/stats", methods=["GET"])
 def stats():
     import pandas as pd
-    import numpy as np
-
     df = pd.read_csv("Chronic_Kidney_Dsease_data.csv")
 
     total      = len(df)
     high_risk  = int(df["Diagnosis"].sum())
     low_risk   = total - high_risk
 
-    # Age distribution
+    # توزيع الأعمار (للرسم البياني في الـ Dashboard)
     bins   = [0, 20, 30, 40, 50, 60, 70, 200]
     labels = ["0-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71+"]
     df["age_group"] = pd.cut(df["Age"], bins=bins, labels=labels)
@@ -137,7 +135,7 @@ def stats():
         for _, row in age_dist.iterrows()
     ]
 
-    # Risk factors
+    # عوامل الخطر بناءً على تحليل الـ Dataset
     risk_factors = [
         {"factor": "High Creatinine",  "impact": round(float((df["SerumCreatinine"] > 3).mean() * 100), 1)},
         {"factor": "Diabetes History", "impact": round(float(df[df["FamilyHistoryDiabetes"] == 1]["Diagnosis"].mean() * 100), 1)},
@@ -151,7 +149,7 @@ def stats():
         "total_records":    total,
         "high_risk":        high_risk,
         "low_risk":         low_risk,
-        "model_accuracy":   99.5,
+        "model_accuracy":   81.0,  # التحديث بناءً على النتيجة الجديدة للـ Gradient Boosting
         "features_count":   12,
         "age_distribution": age_distribution,
         "risk_factors":     risk_factors,
@@ -160,11 +158,11 @@ def stats():
 @app.route("/test-db")
 def test_db():
     try:
-        # simple command to check connection
         db.command("ping")
         return {"status": "success", "message": "MongoDB is connected ✅"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 # ─── Run ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
