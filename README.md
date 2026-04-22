@@ -297,10 +297,10 @@ The model uses a custom threshold of **0.65** (instead of default 0.50) to reduc
 
 | | |
 |---|---|
-| **Name** | *Your Name* |
-| **Institution** | *Your University* |
-| **Year** | 2024–2025 |
-| **Project Type** | Final Year Project (PFE) |
+| **Name** | *Aymane tabissi* |
+| **Institution** | ESIAI |
+| **Year** | 2025–2026 |
+| **Project Type** | Final Year Project (PFA) |
 
 ---
 
