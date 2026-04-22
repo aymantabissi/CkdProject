@@ -3,6 +3,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
+from db.mongo import db
+from routes.auth import auth
+
 import numpy as np
 import os
 
@@ -63,6 +66,7 @@ def parse_input(data: dict) -> list:
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
+app.register_blueprint(auth, url_prefix="/auth")
 @app.route("/", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "message": "NephroAI Backend is running 🚀"})
@@ -153,7 +157,14 @@ def stats():
         "risk_factors":     risk_factors,
     })
 
-
+@app.route("/test-db")
+def test_db():
+    try:
+        # simple command to check connection
+        db.command("ping")
+        return {"status": "success", "message": "MongoDB is connected ✅"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 # ─── Run ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

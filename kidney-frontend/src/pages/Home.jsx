@@ -1,8 +1,10 @@
 // src/components/KidneyForm.jsx
-import { useState } from "react";
+import { useState,useEffect  } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import jsPDF from "jspdf";
 import { predictKidney } from "../services/api";
+import { useNavigate } from "react-router-dom";
+
 
 function Skeleton({ className = "" }) {
   return <div className={`rounded-xl bg-slate-200 animate-pulse ${className}`} />;
@@ -109,6 +111,15 @@ function SectionTitle({ title, type }) {
 }
 
 export default function KidneyForm() {
+  const navigate = useNavigate();
+
+useEffect(() => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    navigate("/login");
+  }
+}, [navigate]);
   const [form, setForm] = useState({
     age: "", bp: "", creatinine: "", urea: "",
     hemoglobin: "", sodium: "", potassium: "",
