@@ -67,7 +67,7 @@ def parse_input(data: dict) -> list:
 def health():
     return jsonify({"status": "ok", "message": "NephroAI Backend is running 🚀"})
 
-
+#api  de prediction random forest 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
