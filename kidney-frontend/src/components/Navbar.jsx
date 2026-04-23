@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 export default function Navbar() {
   const navigate = useNavigate();
-
   const token = localStorage.getItem("token");
 
   const logout = () => {
@@ -19,45 +18,47 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-4"
       style={{
-        background: "rgba(15, 41, 66, 0.85)",
-        backdropFilter: "blur(16px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        // Khdina l-alwan dyal l-login background bach yji mowhed
+        background: "rgba(15, 41, 66, 0.9)",
+        backdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}
     >
-      {/* Logo */}
+      {/* Logo modernisé */}
       <div
-        className="flex items-center gap-2.5 cursor-pointer"
+        className="flex items-center gap-3 cursor-pointer group"
         onClick={() => navigate("/")}
       >
         <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{
-            background: "rgba(56,189,248,0.15)",
-            border: "1px solid rgba(56,189,248,0.25)",
-          }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all border border-sky-500/20 shadow-lg shadow-sky-500/10"
+          style={{ background: "rgba(14, 165, 233, 0.15)" }}
         >
-          🩺
+          <span className="text-xl">🩺</span>
         </div>
 
         <div>
-          <p className="text-[13px] font-bold text-white">NephroAI</p>
-          <p className="text-[10px] text-sky-300/60">Kidney Predictor</p>
+          <h1 className="text-lg font-bold tracking-tight text-white leading-none">
+            Nephro<span className="text-sky-400">AI</span>
+          </h1>
+          <p className="text-[9px] font-medium text-sky-300/40 uppercase tracking-[0.15em]">
+            Kidney Predictor
+          </p>
         </div>
       </div>
 
-      {/* Links */}
-      <div className="flex items-center gap-1">
+      {/* Nav Links Mowhedin */}
+      <div className="flex items-center gap-2">
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
-              `px-4 py-2 rounded-xl text-[12.5px] font-semibold transition ${
+              `px-5 py-2 rounded-xl text-[13px] font-semibold transition-all duration-300 ${
                 isActive
-                  ? "bg-sky-500/15 text-sky-300 border border-sky-500/20"
-                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                  ? "text-sky-300 bg-sky-500/10 border border-sky-500/20"
+                  : "text-white/50 hover:text-white hover:bg-white/5"
               }`
             }
           >
@@ -66,21 +67,22 @@ export default function Navbar() {
         ))}
       </div>
 
-      {/* Auth Buttons */}
-      <div className="flex items-center gap-2">
+      {/* Auth Buttons Mowhedin m3a design dyal Login */}
+      <div className="flex items-center gap-4">
         {!token ? (
           <>
             <button
               onClick={() => navigate("/login")}
-              className="px-4 py-2 text-sm text-white/70 hover:text-white"
+              className="text-sm font-semibold text-white/60 hover:text-white transition-all"
             >
-              Login
+              Sign In
             </button>
 
             <button
               onClick={() => navigate("/register")}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-white"
+              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-sky-500/20"
               style={{
+                // Nefs l-gradient li f-bouton login dyalk
                 background: "linear-gradient(135deg, #0ea5e9, #0d9488)",
               }}
             >
@@ -88,17 +90,15 @@ export default function Navbar() {
             </button>
           </>
         ) : (
-          <>
-            <button
-              onClick={logout}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-white"
-              style={{
-                background: "linear-gradient(135deg, #ef4444, #f97316)",
-              }}
-            >
-              Logout
-            </button>
-          </>
+          <button
+            onClick={logout}
+            className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95 shadow-lg shadow-red-500/10"
+            style={{
+              background: "linear-gradient(135deg, #ef4444, #f97316)",
+            }}
+          >
+            Logout
+          </button>
         )}
       </div>
     </nav>
