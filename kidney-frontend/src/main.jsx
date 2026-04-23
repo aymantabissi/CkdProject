@@ -4,11 +4,13 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
 import App from './App.jsx'
 
-// L-Client ID s-shih dyal NephroAI li khrejti men Google Cloud Console
-const GOOGLE_CLIENT_ID = "838179119632-mpabi4kflpnah09s9ioma9bcm2b8h9tm.apps.googleusercontent.com"
+// Daba l-ID ghadi y-tqra mn l-fichier .env
+// Darori khass t-kon f .env m-semmih: VITE_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    {/* Ila l-ID ma-tqrach (khawy), l-provider may-khdemch, dakchi lach dima t-checki l-.env */}
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <App />
     </GoogleOAuthProvider>
