@@ -7,6 +7,7 @@ from db.mongo import db
 from routes.auth import auth
 
 import numpy as np
+from routes.chat import chat_bp
 import os
 
 app = Flask(__name__)
@@ -64,6 +65,7 @@ def parse_input(data: dict) -> list:
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 app.register_blueprint(auth, url_prefix="/auth")
+app.register_blueprint(chat_bp)
 
 @app.route("/", methods=["GET"])
 def health():

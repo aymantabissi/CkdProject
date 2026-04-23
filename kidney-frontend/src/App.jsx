@@ -7,6 +7,7 @@ import DashboardPage  from "./pages/DashboardPage";
 import AboutPage      from "./pages/AboutPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import Chatbot from "./components/Chatbot"; // 1. Importi l-Chatbot li gadina
 
 export default function App() {
   return (
@@ -14,14 +15,18 @@ export default function App() {
       <Navbar />
       <div className="pt-16">
         <Routes>
-          <Route path="/"          element={<LandingPage />}    />
-          <Route path="/predict"   element={<PredictionPage />} />
-          <Route path="/dashboard" element={<DashboardPage />}  />
-          <Route path="/about"     element={<AboutPage />}      />
+          <Route path="/"           element={<LandingPage />}    />
+          <Route path="/predict"    element={<PredictionPage />} />
+          <Route path="/dashboard"  element={<DashboardPage />}  />
+          <Route path="/about"      element={<AboutPage />}      />
           <Route path="/login" element={<LoginPage />} />
-<Route path="/register" element={<RegisterPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </div>
+
+      {/* 2. Zid l-Chatbot hna bach y-bqa dima l-taht 3la l-imin */}
+      <Chatbot />
+
     </BrowserRouter>
   );
 }
