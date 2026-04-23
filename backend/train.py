@@ -1,4 +1,107 @@
 # kidney-backend/train.py
+# شغّل مرة وحدة: python train.py
+# يسيف الـ model في model/kidney_model.pkl
+
+import os
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.preprocessing import StandardScaler
+import joblib
+
+# Utilisation d'imblearn pour le suréchantillonnage de la classe minoritaire
+try:
+    from imblearn.over_sampling import SMOTE
+except ImportError:
+    print("❌ Erreur : La bibliothèque 'imblearn' est absente.")
+    print("👉 Exécutez : pip install imbalanced-learn")
+    exit()
+
+# Configuration des colonnes (Mapping Frontend -> Dataset)
+FEATURE_MAP = {
+    "age":           "Age",
+    "bp":            "SystolicBP",
+    "creatinine":    "SerumCreatinine",
+    "urea":          "BUNLevels",
+    "hemoglobin":    "HemoglobinLevels",
+    "sodium":        "SerumElectrolytesSodium",
+    "potassium":     "SerumElectrolytesPotassium",
+    "protein":       "ProteinInUrine",
+    "glucose":       "FastingBloodSugar",
+    "rbc":           "UrinaryTractInfections",
+    "diabetes":      "FamilyHistoryDiabetes",
+    "hypertension":  "FamilyHistoryHypertension",
+}
+
+DATA_FEATURES = list(FEATURE_MAP.values())
+
+def train():
+    # 1. Chargement des données
+    csv_path = "Chronic_Kidney_Dsease_data.csv"
+    if not os.path.exists(csv_path):
+        print(f"❌ Fichier introuvable : {csv_path}")
+        return
+
+    df = pd.read_csv(csv_path)
+    print(f"✅ Dataset chargé : {df.shape[0]} lignes")
+
+    # 2. Préparation des variables
+    X = df[DATA_FEATURES].copy()
+    y = df["Diagnosis"]
+
+    # 3. Traitement des valeurs manquantes (médiane)
+    X = X.fillna(X.median())
+
+    # 4. Division des données (Stratified pour garder les proportions)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # 5. Mise à l'échelle (Standardisation)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled  = scaler.transform(X_test)
+
+    # 6. Équilibrage des données avec SMOTE (Crucial pour votre dataset)
+    smote = SMOTE(random_state=42)
+    X_train_res, y_train_res = smote.fit_resample(X_train_scaled, y_train)
+    print(f"📊 Données équilibrées : {len(y_train_res)} échantillons d'entraînement")
+
+    # 7. Entraînement du Gradient Boosting
+    model = GradientBoostingClassifier(
+        n_estimators=150,
+        learning_rate=0.05,
+        max_depth=4,
+        subsample=0.8,
+        random_state=42
+    )
+    model.fit(X_train_res, y_train_res)
+
+    # 8. Évaluation
+    y_pred = model.predict(X_test_scaled)
+    acc = accuracy_score(y_test, y_pred)
+
+    print("\n" + "="*30)
+    print(f"✅ Gradient Boosting (avec SMOTE) entraîné !")
+    print(f"📊 Précision globale : {acc * 100:.2f}%")
+    print("="*30)
+    print(classification_report(y_test, y_pred, target_names=['Low Risk (0)', 'High Risk (1)']))
+
+    # 9. Sauvegarde
+    os.makedirs("model", exist_ok=True)
+    joblib.dump(model,  "model/kidney_model.pkl")
+    joblib.dump(scaler, "model/scaler.pkl")
+    joblib.dump(FEATURE_MAP, "model/feature_map.pkl")
+    print("\n✅ Modèle sauvegardé avec succès dans le dossier /model/")
+
+# التعديل المهم هنا: حيدنا الفراغ اللي كان مورا main
+if __name__ == "__main__":
+    train()
+
+"""
+# kidney-backend/train.py
 # Commande : python train.py
 # Ce script entraîne un modèle Gradient Boosting avec SMOTE pour équilibrer les classes.
 
