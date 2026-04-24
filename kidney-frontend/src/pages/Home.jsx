@@ -258,8 +258,8 @@ export default function KidneyForm() {
 
       setResult(prediction);
       setStats(statsData);
-     // generatePDF(prediction, statsData);
-     // toast.success("Report generated & downloaded!", { icon: "📄" });
+      generatePDF(prediction, statsData);
+      toast.success("Report generated & downloaded!", { icon: "📄" });
     } catch (err) {
       toast.error(err?.response?.data?.error || "Server error");
     }
