@@ -110,14 +110,11 @@ function SectionTitle({ title, type }) {
 }
 
 export default function KidneyForm() {
+  //pour 
+  const [file, setFile] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-    }
-  }, [navigate]);
+  // pour verifier si login exsit or no
 
   const [form, setForm] = useState({
     age: "", bp: "", creatinine: "", urea: "",
@@ -131,9 +128,14 @@ export default function KidneyForm() {
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const generatePDF = (predictionOverride, statsOverride) => {
+  // ─── generatePDF receives prediction + statsData as params so it works both
+  //     auto (called right after API) and manually (Download button).
+  //     When called from the button, falls back to component state.
+  // ─── generatePDF — تقبل formData كـ parameter ────────────────────────────────
+  const generatePDF = (predictionOverride, statsOverride, formOverride) => {
     const currentResult = predictionOverride ?? result;
-    const currentStats = statsOverride ?? stats;
+    const currentStats  = statsOverride      ?? stats;
+    const currentForm   = formOverride       ?? form;   // ← هاد السطر هو الحل
     const isHigh = currentResult === "high";
 
     const doc = new jsPDF();
@@ -168,19 +170,20 @@ export default function KidneyForm() {
     doc.setFontSize(9);
     doc.text("PATIENT CLINICAL DATA", 18, 71);
 
+    // ─── TABLE — كتستعمل currentForm بدل form ───
     const fields = [
-      ["Age", form.age + " years"],
-      ["Blood Pressure", form.bp + " mmHg"],
-      ["Creatinine", form.creatinine + " mg/dL"],
-      ["Blood Urea", form.urea + " mg/dL"],
-      ["Hemoglobin", form.hemoglobin + " g/dL"],
-      ["Sodium", form.sodium + " mEq/L"],
-      ["Potassium", form.potassium + " mEq/L"],
-      ["Protein in Urine", form.protein === "1" ? "Positive" : "Negative"],
-      ["Glucose in Urine", form.glucose === "1" ? "Positive" : "Negative"],
-      ["RBC in Urine", form.rbc === "1" ? "Positive" : "Negative"],
-      ["Diabetes", form.diabetes === "1" ? "Yes" : "No"],
-      ["Hypertension", form.hypertension === "1" ? "Yes" : "No"],
+      ["Age",              (currentForm.age         || "—") + " years"],
+      ["Blood Pressure",   (currentForm.bp          || "—") + " mmHg"],
+      ["Creatinine",       (currentForm.creatinine  || "—") + " mg/dL"],
+      ["Blood Urea",       (currentForm.urea        || "—") + " mg/dL"],
+      ["Hemoglobin",       (currentForm.hemoglobin  || "—") + " g/dL"],
+      ["Sodium",           (currentForm.sodium      || "—") + " mEq/L"],
+      ["Potassium",        (currentForm.potassium   || "—") + " mEq/L"],
+      ["Protein in Urine", currentForm.protein      === "1" ? "Positive" : "Negative"],
+      ["Glucose in Urine", currentForm.glucose      === "1" ? "Positive" : "Negative"],
+      ["RBC in Urine",     currentForm.rbc          === "1" ? "Positive" : "Negative"],
+      ["Diabetes",         currentForm.diabetes     === "1" ? "Yes" : "No"],
+      ["Hypertension",     currentForm.hypertension === "1" ? "Yes" : "No"],
     ];
 
     let y = 80;
@@ -195,27 +198,26 @@ export default function KidneyForm() {
       doc.text(lbl, 18, y);
       doc.setTextColor(15, 23, 42);
       doc.setFont("helvetica", "bold");
-      doc.text(val, 120, y);
+      doc.text(String(val), 120, y);
       y += 8;
     });
 
+    // ─── STATS ROW ───
     if (currentStats) {
       y += 4;
       doc.setFillColor(isHigh ? 254 : 236, isHigh ? 235 : 253, isHigh ? 235 : 245);
       doc.roundedRect(15, y, 87, 16, 3, 3, "F");
       doc.roundedRect(108, y, 87, 16, 3, 3, "F");
-
       doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(`${currentStats.risk_percent}%`, 58, y + 10, { align: "center" });
-      doc.text(`${currentStats.confidence}%`, 151, y + 10, { align: "center" });
-
+      doc.text(`${currentStats.risk_percent}%`, 58,  y + 10, { align: "center" });
+      doc.text(`${currentStats.confidence}%`,   151, y + 10, { align: "center" });
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(120, 120, 120);
-      doc.text("RISK SCORE", 58, y + 14, { align: "center" });
-      doc.text("CONFIDENCE", 151, y + 14, { align: "center" });
+      doc.text("RISK SCORE",  58,  y + 14, { align: "center" });
+      doc.text("CONFIDENCE",  151, y + 14, { align: "center" });
       y += 22;
     }
 
@@ -256,14 +258,49 @@ export default function KidneyForm() {
 
       setResult(prediction);
       setStats(statsData);
-      generatePDF(prediction, statsData);
-      toast.success("Report generated & downloaded!", { icon: "📄" });
+     // generatePDF(prediction, statsData);
+     // toast.success("Report generated & downloaded!", { icon: "📄" });
     } catch (err) {
       toast.error(err?.response?.data?.error || "Server error");
     }
     setLoading(false);
   };
+const handleUpload = async () => {
+  if (!file) return;
+  setLoading(true);
+  const formData = new FormData();
+  formData.append("file", file);
 
+  try {
+    const res = await fetch("http://localhost:5000/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (data.inputs) {
+      // ✅ Updati l-form state bach l-interface t-beddel
+      setForm(data.inputs);
+      
+      // ✅ Update result o stats bach l-pourcentage ibane
+      const pred = data.prediction === 1 ? "high" : "low";
+      setResult(pred);
+      setStats({
+        confidence: data.confidence,
+        risk_percent: data.risk_percent
+      });
+
+      // ✅ Generate PDF b-had l-data jdid
+      //generatePDF(pred, {confidence: data.confidence, risk_percent: data.risk_percent});
+
+      //toast.success("File analyzed & UI updated!");
+    }
+  } catch (err) {
+    toast.error("Error connecting to server");
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <>
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} containerStyle={{ top: 80 }} />
@@ -452,7 +489,34 @@ export default function KidneyForm() {
                     </svg>
                     Predict Risk
                   </button>
-                  <p className="text-center text-[10px] text-slate-400 mt-2">
+<div className="mt-3 flex flex-col gap-2">
+
+  {/* Upload Input */}
+  <label className="w-full cursor-pointer border-2 border-dashed border-slate-300 rounded-2xl py-3 text-center text-[11px] text-slate-400 hover:border-blue-400 hover:text-blue-500 transition">
+    {file ? file.name : "Upload Analysis File (PDF / Image / CSV)"}
+    <input
+      type="file"
+      accept=".pdf,.jpg,.png,.csv"
+      onChange={(e) => setFile(e.target.files[0])}
+      hidden
+    />
+  </label>
+
+  {/* Upload Button */}
+  <button
+    type="button"
+    onClick={handleUpload}
+    disabled={!file}
+    className="w-full py-2.5 rounded-2xl font-bold text-[12px] text-white transition-all disabled:opacity-40"
+    style={{
+      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    }}
+  >
+    Upload & Analyze File
+  </button>
+
+</div>
+                  <p className="text-center text-[9.5px] text-slate-300 mt-2.5">
                     For clinical decision support only · Does not replace medical diagnosis
                   </p>
                 </div>

@@ -99,12 +99,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     getStats()
-      .then(setData)
+      .then((raw) => {
+        // نضمنو كل field عنده قيمة default
+        setData({
+          total_records:    raw.total_records    ?? raw.high_risk + raw.low_risk ?? 0,
+          high_risk:        raw.high_risk        ?? 0,
+          low_risk:         raw.low_risk         ?? 0,
+          model_accuracy:   raw.model_accuracy   ?? 0,
+          features_count:   raw.features_count   ?? 12,
+          age_distribution: raw.age_distribution ?? [],
+          risk_factors:     raw.risk_factors     ?? [],
+        });
+      })
       .catch(() => setError("Failed to load stats — is the backend running?"))
       .finally(() => setLoading(false));
   }, []);
 
   // ── Chart data (built from API response) ──────────────────────────────────
+  const ageDist    = data?.age_distribution ?? [];
+  const riskFactors = data?.risk_factors     ?? [];
+
   const pieData = data ? {
     labels: ["High Risk", "Low Risk"],
     datasets: [{
@@ -116,20 +130,20 @@ export default function DashboardPage() {
     }],
   } : null;
 
-  const ageData = data ? {
-    labels: data.age_distribution.map(d => d.age),
+  const ageData = ageDist.length ? {
+    labels: ageDist.map(d => d.age),
     datasets: [
-      { label: "High Risk", data: data.age_distribution.map(d => d.high), backgroundColor: "rgba(248,113,113,0.8)", borderRadius: 6 },
-      { label: "Low Risk",  data: data.age_distribution.map(d => d.low),  backgroundColor: "rgba(52,211,153,0.8)",  borderRadius: 6 },
+      { label: "High Risk", data: ageDist.map(d => d.high), backgroundColor: "rgba(248,113,113,0.8)", borderRadius: 6 },
+      { label: "Low Risk",  data: ageDist.map(d => d.low),  backgroundColor: "rgba(52,211,153,0.8)",  borderRadius: 6 },
     ],
   } : null;
 
-  const factorsData = data ? {
-    labels: data.risk_factors.map(d => d.factor),
+  const factorsData = riskFactors.length ? {
+    labels: riskFactors.map(d => d.factor),
     datasets: [{
       label: "Impact %",
-      data: data.risk_factors.map(d => d.impact),
-      backgroundColor: data.risk_factors.map(d =>
+      data: riskFactors.map(d => d.impact),
+      backgroundColor: riskFactors.map(d =>
         d.impact >= 80 ? "rgba(248,113,113,0.85)" :
         d.impact >= 60 ? "rgba(251,146,60,0.8)" :
                          "rgba(56,189,248,0.8)"
@@ -184,10 +198,14 @@ export default function DashboardPage() {
             [1,2,3,4].map(i => <SkeletonCard key={i} />)
           ) : data ? (
             <>
-              <StatCard label="Total Records"  value={data.total_records}            sub="CKD dataset"        accent="sky"     />
-              <StatCard label="High Risk"      value={data.high_risk}                sub={`${Math.round(data.high_risk/data.total_records*100)}% of total`} accent="red" />
-              <StatCard label="Low Risk"       value={data.low_risk}                 sub={`${Math.round(data.low_risk/data.total_records*100)}% of total`}  accent="emerald" />
-              <StatCard label="Model Accuracy" value={`${data.model_accuracy}%`}     sub="Random Forest"     accent="violet"  />
+              <StatCard label="Total Records"  value={data.total_records || (data.high_risk + data.low_risk)} sub="CKD dataset" accent="sky" />
+              <StatCard label="High Risk"      value={data.high_risk}
+                sub={data.total_records ? `${Math.round(data.high_risk / data.total_records * 100)}% of total` : `${data.high_risk} patients`}
+                accent="red" />
+              <StatCard label="Low Risk"       value={data.low_risk}
+                sub={data.total_records ? `${Math.round(data.low_risk / data.total_records * 100)}% of total` : `${data.low_risk} patients`}
+                accent="emerald" />
+              <StatCard label="Model Accuracy" value={data.model_accuracy ? `${data.model_accuracy}%` : "N/A"} sub="Gradient Boosting" accent="violet" />
             </>
           ) : null}
         </div>
@@ -199,10 +217,10 @@ export default function DashboardPage() {
           ) : data ? (
             <>
               <Panel title="Risk Distribution" sub="High Risk vs Low Risk patients">
-                <Doughnut data={pieData} options={pieOpts} />
+                {pieData && <Doughnut data={pieData} options={pieOpts} />}
               </Panel>
               <Panel title="Risk Factor Impact" sub="% of high-risk cases per factor">
-                <Bar data={factorsData} options={hBarOpts} />
+                {factorsData && <Bar data={factorsData} options={hBarOpts} />}
               </Panel>
             </>
           ) : null}
@@ -214,7 +232,7 @@ export default function DashboardPage() {
             <SkeletonChart />
           ) : data ? (
             <Panel title="Age Distribution" sub="High Risk vs Low Risk by age group">
-              <Bar data={ageData} options={barOpts} />
+              {ageData && <Bar data={ageData} options={barOpts} />}
             </Panel>
           ) : null}
         </div>
