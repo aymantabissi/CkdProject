@@ -1,107 +1,136 @@
 // src/pages/AboutPage.jsx
+import { motion } from "framer-motion";
 
-const team = [
-  { initials: "??", name: "Your Name", role: "Developer & ML Engineer" },
-];
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0 },
+};
 
 const techStack = [
   { name: "React + Vite", cat: "Frontend" },
-  { name: "Tailwind CSS", cat: "Styling" },
-  { name: "Python Flask", cat: "Backend" },
-  { name: "Scikit-learn", cat: "ML Model" },
-  { name: "Pandas / NumPy", cat: "Data Processing" },
-  { name: "UCI CKD Dataset", cat: "Training Data" },
+  { name: "Tailwind CSS", cat: "UI" },
+  { name: "Flask API", cat: "Backend" },
+  { name: "Scikit-learn", cat: "ML" },
+  { name: "Pandas / NumPy", cat: "Data" },
+  { name: "CKD Dataset", cat: "Dataset" },
 ];
 
 export default function AboutPage() {
   return (
-    <div
-      className="min-h-screen text-white"
-      style={{ background: "linear-gradient(135deg, #0f2942 0%, #0d3d56 50%, #0a4a4a 100%)" }}
-    >
-      <div className="max-w-3xl mx-auto px-6 py-14">
+    <div className="min-h-screen text-white relative overflow-hidden"
+      style={{ background: "linear-gradient(135deg,#0f2942,#0d3d56,#0a4a4a)" }}>
 
-        {/* Header */}
-        <div className="mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-            <span className="text-sky-300 text-[11px] font-semibold uppercase tracking-widest">About this project</span>
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-4">
-            Kidney Disease<br />
-            <span style={{ background: "linear-gradient(90deg,#38bdf8,#34d399)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+      {/* Floating Background Orbs */}
+      <div className="absolute top-[-120px] left-[-120px] w-96 h-96 bg-sky-400/10 blur-3xl rounded-full animate-pulse" />
+      <div className="absolute bottom-[-120px] right-[-120px] w-96 h-96 bg-teal-400/10 blur-3xl rounded-full animate-pulse" />
+
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="max-w-5xl mx-auto px-6 py-16 relative z-10"
+      >
+
+        {/* HEADER */}
+        <motion.div variants={item} className="text-center mb-14">
+          <p className="text-sky-300 text-xs uppercase tracking-[0.3em] mb-4">
+            AI Medical Project
+          </p>
+
+          <h1 className="text-5xl font-black leading-tight">
+            Kidney Disease
+            <span className="block bg-gradient-to-r from-sky-400 to-teal-300 text-transparent bg-clip-text">
               Prediction System
             </span>
           </h1>
-          <p className="text-slate-300 text-[14px] leading-relaxed max-w-xl">
-            This project was developed as part of a Final Year Project (PFE) focused on the
-            application of Machine Learning and Business Intelligence techniques to predict
-            the risk of Acute or Chronic Kidney Disease from clinical and biological patient data.
-          </p>
-        </div>
 
-        {/* Objective */}
-        <div
-          className="rounded-2xl border border-white/5 p-6 mb-6"
-          style={{ background: "rgba(255,255,255,0.04)" }}
-        >
-          <h2 className="text-[13px] font-bold text-sky-300 uppercase tracking-widest mb-3">Objective</h2>
-          <p className="text-slate-300 text-[13px] leading-relaxed">
-            To build a clinical decision support system that helps healthcare professionals
-            detect kidney disease risk early — improving diagnosis speed and patient care —
-            using a trained ML model served through a REST API.
+          <p className="text-slate-300 mt-6 max-w-2xl mx-auto text-sm leading-relaxed">
+            Advanced AI-powered clinical decision support system that predicts kidney disease risk
+            using machine learning trained on real medical datasets.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Tech Stack */}
-        <div
-          className="rounded-2xl border border-white/5 p-6 mb-6"
-          style={{ background: "rgba(255,255,255,0.04)" }}
+        {/* CARDS GRID */}
+        <motion.div
+          variants={container}
+          className="grid md:grid-cols-3 gap-6 mb-16"
         >
-          <h2 className="text-[13px] font-bold text-teal-300 uppercase tracking-widest mb-4">Tech Stack</h2>
-          <div className="grid grid-cols-3 gap-3">
-            {techStack.map((t) => (
-              <div
-                key={t.name}
-                className="rounded-xl p-3 border border-white/5"
-                style={{ background: "rgba(255,255,255,0.03)" }}
+          {[
+            {
+              title: "Objective",
+              text: "Early detection of kidney disease using AI models to assist doctors in decision making.",
+              color: "from-sky-500/20",
+            },
+            {
+              title: "Impact",
+              text: "Faster diagnosis, improved patient care, reduced medical risk through prediction.",
+              color: "from-teal-500/20",
+            },
+            {
+              title: "Model",
+              text: "Trained ML model using Random Forest & Logistic Regression on CKD dataset.",
+              color: "from-violet-500/20",
+            },
+          ].map((c, i) => (
+            <motion.div
+              key={i}
+              variants={item}
+              whileHover={{ scale: 1.05 }}
+              className={`p-6 rounded-2xl border border-white/10 backdrop-blur-xl bg-gradient-to-b ${c.color} to-transparent`}
+            >
+              <h3 className="text-sm font-bold mb-2 text-white">{c.title}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">{c.text}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* TECH STACK */}
+        <motion.div variants={item} className="mb-16">
+          <h2 className="text-sm uppercase tracking-widest text-teal-300 mb-6 text-center">
+            Tech Stack
+          </h2>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {techStack.map((t, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ y: -5 }}
+                className="p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-lg"
               >
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{t.cat}</p>
-                <p className="text-[13px] font-semibold text-white">{t.name}</p>
-              </div>
+                <p className="text-[10px] text-slate-400 uppercase">{t.cat}</p>
+                <p className="text-sm font-semibold">{t.name}</p>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Team */}
-        <div
-          className="rounded-2xl border border-white/5 p-6 mb-6"
-          style={{ background: "rgba(255,255,255,0.04)" }}
+        {/* CTA SECTION */}
+        <motion.div
+          variants={item}
+          whileHover={{ scale: 1.02 }}
+          className="p-10 text-center rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl"
         >
-          <h2 className="text-[13px] font-bold text-violet-300 uppercase tracking-widest mb-4">Developer</h2>
-          {team.map((m) => (
-            <div key={m.name} className="flex items-center gap-4">
-              <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center text-[13px] font-bold text-sky-300"
-                style={{ background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.2)" }}
-              >
-                {m.initials}
-              </div>
-              <div>
-                <p className="text-[14px] font-bold text-white">{m.name}</p>
-                <p className="text-[12px] text-slate-400">{m.role}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+          <h2 className="text-2xl font-bold mb-3">
+            Built for Medical Intelligence 🚀
+          </h2>
+          <p className="text-slate-300 text-sm mb-6">
+            A complete AI pipeline from dataset → training → prediction → UI visualization.
+          </p>
 
-        {/* Disclaimer */}
-        <p className="text-center text-[11px] text-white/20 mt-8 leading-relaxed">
-          This tool is for academic and clinical decision support purposes only.<br />
-          It does not replace professional medical diagnosis or specialist consultation.
-        </p>
+          <button className="px-6 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-sky-500 to-teal-400 hover:scale-105 transition">
+            Explore Project
+          </button>
+        </motion.div>
 
-      </div>
+      </motion.div>
     </div>
   );
 }
