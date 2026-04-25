@@ -9,6 +9,10 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
+@app.after_request
+def apply_headers(response):
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    return response
 # ─── MongoDB — optional ───────────────────────────────────────────────────────
 try:
     from db.mongo import db, users_collection, history_collection
