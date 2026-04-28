@@ -3,101 +3,14 @@ import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import jsPDF from "jspdf";
 import { predictKidney } from "../services/api";
+import Field from '../ui/Field.jsx'
+import NumInput from "../ui/NumInput.jsx";
+import generatePDF from "../utils/pdfGenerator.js";
+import Toggle from "../ui/Toggle.jsx";
+import LoadingOverlay from "../ui/LoadingOverlay.jsx";
 import { useNavigate } from "react-router-dom";
 
-function Skeleton({ className = "" }) {
-  return <div className={`rounded-xl bg-slate-200 animate-pulse ${className}`} />;
-}
 
-function LoadingOverlay() {
-  return (
-    <div
-      className="absolute inset-0 z-20 rounded-3xl flex flex-col items-center justify-center gap-6"
-      style={{ background: "rgba(248,250,252,0.92)", backdropFilter: "blur(4px)" }}
-    >
-      <div className="relative">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center animate-pulse"
-          style={{ background: "linear-gradient(135deg,rgba(14,165,233,0.15),rgba(13,148,136,0.15))" }}
-        >
-          <svg className="w-8 h-8 text-sky-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2C8.5 2 5 5.2 5 9.2c0 2.8 1.3 5.3 2.8 7.2C9.5 18.5 10.2 21 12 21c1.8 0 2.5-2.5 4.2-4.6C17.7 14.5 19 12 19 9.2 19 5.2 15.5 2 12 2z" />
-            <line x1="12" y1="8" x2="12" y2="13" /><line x1="9.5" y1="10.5" x2="14.5" y2="10.5" />
-          </svg>
-        </div>
-        <div className="absolute inset-[-6px] rounded-[20px] border-2 border-transparent border-t-sky-400 animate-spin" />
-      </div>
-      <div className="flex flex-col gap-2.5 w-52">
-        <Skeleton className="h-2.5 w-full" />
-        <Skeleton className="h-2.5 w-4/5" />
-        <Skeleton className="h-2.5 w-3/5" />
-      </div>
-      <p className="text-[12px] font-semibold text-slate-400 tracking-wide">
-        Analyzing patient data...
-      </p>
-    </div>
-  );
-}
-
-function Toggle({ name, value, onChange }) {
-  return (
-    <div className="flex gap-1.5">
-      {[{ label: "No", val: "0" }, { label: "Yes", val: "1" }].map(({ label, val }) => {
-        const active = value === val;
-        return (
-          <button
-            key={val}
-            type="button"
-            onClick={() => onChange({ target: { name, value: val } })}
-            className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg border-2 transition-all duration-150 ${
-              active && val === "1"
-                ? "bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-200"
-                : active
-                ? "bg-red-400 text-white border-red-400 shadow-sm shadow-red-200"
-                : "bg-white/60 text-slate-400 border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Field({ label, unit, required, children }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[9.5px] font-bold uppercase tracking-[0.09em] text-slate-400 flex items-center gap-1 flex-wrap">
-        {label}
-        {required && <span className="text-blue-400 text-[9px]">✱</span>}
-        {unit && <span className="font-normal normal-case tracking-normal text-slate-300">· {unit}</span>}
-      </p>
-      {children}
-    </div>
-  );
-}
-
-function NumInput({ name, placeholder, step, value, onChange }) {
-  return (
-    <input
-      name={name}
-      type="number"
-      step={step}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      className="w-full bg-white border-2 border-slate-100 rounded-xl px-3 py-2 text-[13px] font-mono font-semibold text-slate-700 placeholder-slate-200 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50 transition-all"
-    />
-  );
-}
-
-const SECTION_STYLES = {
-  personal: { dot: "bg-blue-400", label: "text-blue-500" },
-  blood: { dot: "bg-teal-500", label: "text-teal-600" },
-  urine: { dot: "bg-amber-400", label: "text-amber-600" },
-  history: { dot: "bg-violet-400", label: "text-violet-600" },
-};
 
 function SectionTitle({ title, type }) {
   const s = SECTION_STYLES[type];
@@ -108,6 +21,17 @@ function SectionTitle({ title, type }) {
     </div>
   );
 }
+
+
+
+const SECTION_STYLES = {
+  personal: { dot: "bg-blue-400", label: "text-blue-500" },
+  blood: { dot: "bg-teal-500", label: "text-teal-600" },
+  urine: { dot: "bg-amber-400", label: "text-amber-600" },
+  history: { dot: "bg-violet-400", label: "text-violet-600" },
+};
+
+
 
 export default function KidneyForm() {
   //pour 
@@ -128,121 +52,8 @@ export default function KidneyForm() {
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  // ─── generatePDF receives prediction + statsData as params so it works both
-  //     auto (called right after API) and manually (Download button).
-  //     When called from the button, falls back to component state.
-  // ─── generatePDF — تقبل formData كـ parameter ────────────────────────────────
-  const generatePDF = (predictionOverride, statsOverride, formOverride) => {
-    const currentResult = predictionOverride ?? result;
-    const currentStats  = statsOverride      ?? stats;
-    const currentForm   = formOverride       ?? form;   // ← هاد السطر هو الحل
-    const isHigh = currentResult === "high";
 
-    const doc = new jsPDF();
-    const date = new Date().toLocaleDateString("en-GB");
-    const time = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-
-    doc.setFillColor(15, 41, 66);
-    doc.rect(0, 0, 210, 35, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("NephroAI \u2014 Kidney Risk Report", 20, 15);
-    doc.setFontSize(9);
-    doc.setTextColor(125, 211, 252);
-    doc.text("AI-Powered Clinical Decision Support", 20, 22);
-    doc.setTextColor(180, 180, 180);
-    doc.text(`Generated: ${date} at ${time}`, 20, 28);
-
-    const bannerColor = isHigh ? [254, 226, 226] : [209, 250, 229];
-    const bannerText = isHigh ? [153, 27, 27] : [6, 95, 70];
-    const bannerLabel = isHigh ? "HIGH RISK DETECTED" : "LOW RISK \u2014 NORMAL RANGE";
-    doc.setFillColor(...bannerColor);
-    doc.roundedRect(15, 45, 180, 15, 4, 4, "F");
-    doc.setTextColor(...bannerText);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text(bannerLabel, 105, 55, { align: "center" });
-
-    doc.setFillColor(240, 240, 240);
-    doc.roundedRect(15, 65, 180, 8, 2, 2, "F");
-    doc.setTextColor(30, 64, 175);
-    doc.setFontSize(9);
-    doc.text("PATIENT CLINICAL DATA", 18, 71);
-
-    // ─── TABLE — كتستعمل currentForm بدل form ───
-    const fields = [
-      ["Age",              (currentForm.age         || "—") + " years"],
-      ["Blood Pressure",   (currentForm.bp          || "—") + " mmHg"],
-      ["Creatinine",       (currentForm.creatinine  || "—") + " mg/dL"],
-      ["Blood Urea",       (currentForm.urea        || "—") + " mg/dL"],
-      ["Hemoglobin",       (currentForm.hemoglobin  || "—") + " g/dL"],
-      ["Sodium",           (currentForm.sodium      || "—") + " mEq/L"],
-      ["Potassium",        (currentForm.potassium   || "—") + " mEq/L"],
-      ["Protein in Urine", currentForm.protein      === "1" ? "Positive" : "Negative"],
-      ["Glucose in Urine", currentForm.glucose      === "1" ? "Positive" : "Negative"],
-      ["RBC in Urine",     currentForm.rbc          === "1" ? "Positive" : "Negative"],
-      ["Diabetes",         currentForm.diabetes     === "1" ? "Yes" : "No"],
-      ["Hypertension",     currentForm.hypertension === "1" ? "Yes" : "No"],
-    ];
-
-    let y = 80;
-    fields.forEach(([lbl, val], i) => {
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(15, y - 5, 180, 8, "F");
-      }
-      doc.setTextColor(100, 116, 139);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.text(lbl, 18, y);
-      doc.setTextColor(15, 23, 42);
-      doc.setFont("helvetica", "bold");
-      doc.text(String(val), 120, y);
-      y += 8;
-    });
-
-    // ─── STATS ROW ───
-    if (currentStats) {
-      y += 4;
-      doc.setFillColor(isHigh ? 254 : 236, isHigh ? 235 : 253, isHigh ? 235 : 245);
-      doc.roundedRect(15, y, 87, 16, 3, 3, "F");
-      doc.roundedRect(108, y, 87, 16, 3, 3, "F");
-      doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${currentStats.risk_percent}%`, 58,  y + 10, { align: "center" });
-      doc.text(`${currentStats.confidence}%`,   151, y + 10, { align: "center" });
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(120, 120, 120);
-      doc.text("RISK SCORE",  58,  y + 14, { align: "center" });
-      doc.text("CONFIDENCE",  151, y + 14, { align: "center" });
-      y += 22;
-    }
-
-    y += 4;
-    const recText = isHigh
-      ? "Further clinical evaluation is strongly recommended. Please consult a nephrologist."
-      : "Lab values are within normal range. Maintain a healthy lifestyle and regular checkups.";
-    doc.setFillColor(isHigh ? 254 : 240, isHigh ? 242 : 253, isHigh ? 242 : 244);
-    doc.setDrawColor(isHigh ? 252 : 134, isHigh ? 165 : 239, isHigh ? 165 : 172);
-    doc.roundedRect(15, y, 180, 25, 3, 3, "FD");
-    doc.setTextColor(isHigh ? 153 : 22, isHigh ? 27 : 101, isHigh ? 27 : 52);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("CLINICAL RECOMMENDATION", 18, y + 7);
-    doc.setFont("helvetica", "normal");
-    doc.text(doc.splitTextToSize(recText, 170), 18, y + 14);
-
-    doc.setFillColor(15, 41, 66);
-    doc.rect(0, 282, 210, 15, "F");
-    doc.setTextColor(200, 200, 200);
-    doc.setFontSize(7);
-    doc.text("NephroAI \u00B7 For clinical decision support only", 105, 290, { align: "center" });
-
-    doc.save("NephroAI_Report.pdf");
-  };
+  
 
   const handleSubmit = async () => {
     if (!form.age || !form.bp || !form.creatinine) {
@@ -464,7 +275,7 @@ const handleUpload = async () => {
                   {result && (
                     <button
                       type="button"
-                      onClick={() => generatePDF()}
+                      onClick={() => generatePDF(result, stats, form)}
                       className="w-full py-3 rounded-2xl font-bold text-[13px] text-slate-600 border border-slate-200 hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
